@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  // const { KiteConnect } = require("kiteconnect");
 
   const navigate = useNavigate();
 
@@ -223,3 +224,8 @@ export default function LoginPage() {
     </div>
   );
 }
+
+
+
+
+
