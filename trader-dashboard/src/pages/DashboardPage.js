@@ -1,11 +1,9 @@
-
-
-
-
+                                         //mobile resposivness
 
 import React, { useState, useEffect } from "react";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 import { ref, onValue, off } from "firebase/database";
+import { onAuthStateChanged } from "firebase/auth";
 
 // Modal component
 function DetailModal({ open, onClose, title, children }) {
@@ -31,9 +29,40 @@ export default function DashboardPage() {
   const [modalInfo, setModalInfo] = useState({ open: false, title: "", body: null });
   const [totalPnL, setTotalPnL] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [investmentAmount, setInvestmentAmount] = useState(0);
+  const [userId, setUserId] = useState(null);
 
-  // Set up Firebase realtime listeners
+  // Authentication and user data listener
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setUserId(user.uid);
+        
+        // Fetch user data to get investment amount
+        const userRef = ref(db, `users/${user.uid}`);
+        const unsubUser = onValue(userRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const userData = snapshot.val();
+            setInvestmentAmount(userData.investedAmount || userData.investmentAmount || 0);
+          } else {
+            setInvestmentAmount(0);
+          }
+        });
+        
+        return () => off(userRef, "value", unsubUser);
+      } else {
+        setUserId(null);
+        setInvestmentAmount(0);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Set up Firebase realtime listeners for trading data
+  useEffect(() => {
+    if (!userId) return;
+
     const walletRef = ref(db, "wallet");
     const positionsRef = ref(db, "open_positions");
     const tradesRef = ref(db, "executed_trades");
@@ -68,7 +97,7 @@ export default function DashboardPage() {
       off(tradesRef, "value", unsubOrders);
       off(pnlRef, "value", unsubPnL);
     };
-  }, []);
+  }, [userId]);
 
   // Calculate total invested value from positions
   const totalInvested = positions.reduce((total, position) => {
@@ -97,7 +126,7 @@ export default function DashboardPage() {
         </div>
         <div style={metricItemStyle}>
           <span style={metricLabelStyle}>Invested Amount</span>
-          <span style={metricValueStyle}>₹{totalInvested.toLocaleString()}</span>
+          <span style={metricValueStyle}>₹{investmentAmount.toLocaleString()}</span>
         </div>
       </div>
       <div style={metricRowStyle}>
@@ -109,7 +138,7 @@ export default function DashboardPage() {
           <span style={metricLabelStyle}>Total Returns</span>
           <div>
             <span style={{ ...metricValueStyle, color: totalPnL >= 0 ? "#16a34a" : "#dc2626" }}>
-              {totalInvested > 0 ? `${((totalPnL / totalInvested) * 100).toFixed(2)}%` : "0%"}
+              {investmentAmount > 0 ? `${((totalPnL / investmentAmount) * 100).toFixed(2)}%` : "0%"}
             </span>
             <span style={{ ...metricSubValueStyle, color: totalPnL >= 0 ? "#16a34a" : "#dc2626" }}>
               {totalPnL >= 0 ? "+" : ""}₹{Math.abs(totalPnL).toFixed(2)}
@@ -156,8 +185,28 @@ export default function DashboardPage() {
     </div>
   );
 
+  const investmentBody = (
+    <div style={modalContentStyle}>
+      <div style={largeMetricStyle}>
+        <span style={metricLabelStyle}>Total Investment</span>
+        <span style={{ ...metricValueStyle, fontSize: "2.2rem" }}>₹{investmentAmount.toLocaleString()}</span>
+      </div>
+      <div style={dividerStyle} />
+      <div style={metricRowStyle}>
+        <div style={metricItemStyle}>
+          <span style={metricLabelStyle}>Active Positions</span>
+          <span style={metricValueStyle}>{positions.filter(p => isPositionActive(p)).length}</span>
+        </div>
+        <div style={metricItemStyle}>
+          <span style={metricLabelStyle}>Total Positions</span>
+          <span style={metricValueStyle}>{positions.length}</span>
+        </div>
+      </div>
+    </div>
+  );
+
   const cardCommon = {
-    flex: 1,
+    flex: "1 1 160px",
     minWidth: 160,
     borderRadius: 13,
     padding: "1rem 1.3rem",
@@ -203,6 +252,18 @@ export default function DashboardPage() {
             <div style={cardValueStyle}>₹{totalNetWorth.toLocaleString()}</div>
             <div style={{ fontSize: 14, color: "#00838f", marginTop: 4 }}>
               {positions.filter(p => isPositionActive(p)).length} active positions
+            </div>
+          </div>
+          
+          {/* Investment Amount Card */}
+          <div
+            style={{ ...cardCommon, background: "linear-gradient(135deg, #ede7f6 0%, #d1c4e9 100%)" }}
+            onClick={() => openModal("Investment Details", investmentBody)}
+          >
+            <div style={cardLabelStyle("#5e35b1")}>Investment Amount</div>
+            <div style={cardValueStyle}>₹{investmentAmount.toLocaleString()}</div>
+            <div style={{ fontSize: 14, color: "#5e35b1", marginTop: 4 }}>
+              {positions.length} total positions
             </div>
           </div>
           
@@ -429,14 +490,18 @@ function SectionTable({ title, headers, rows, onRowClick }) {
   );
 }
 
-// Styles
+// Styles with media queries for responsiveness
 const paperStyle = {
   width: "100%",
   maxWidth: "1200px",
   backgroundColor: "white",
   borderRadius: "12px",
   padding: "2rem",
-  boxShadow: "0 4px 20px rgba(0,0,0,0.08)"
+  boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+  "@media (max-width: 768px)": {
+    padding: "1rem",
+    borderRadius: "8px"
+  }
 };
 
 const titleStyle = {
@@ -444,21 +509,33 @@ const titleStyle = {
   fontWeight: "700",
   color: "#1f2937",
   marginBottom: "2rem",
-  textAlign: "center"
+  textAlign: "center",
+  "@media (max-width: 768px)": {
+    fontSize: "1.5rem",
+    marginBottom: "1.5rem"
+  }
 };
 
 const subTitleStyle = {
   fontSize: "1.3rem",
   fontWeight: "600",
   color: "#374151",
-  marginBottom: "1rem"
+  marginBottom: "1rem",
+  "@media (max-width: 768px)": {
+    fontSize: "1.1rem"
+  }
 };
 
 const cardRowStyle = {
   display: "flex",
   gap: "1.2rem",
   marginBottom: "2.5rem",
-  flexWrap: "wrap"
+  flexWrap: "wrap",
+  "@media (max-width: 768px)": {
+    gap: "1rem",
+    marginBottom: "2rem",
+    flexDirection: "column"
+  }
 };
 
 const cardLabelStyle = (color) => ({
@@ -467,20 +544,30 @@ const cardLabelStyle = (color) => ({
   color: color,
   marginBottom: "0.5rem",
   textTransform: "uppercase",
-  letterSpacing: "0.5px"
+  letterSpacing: "0.5px",
+  "@media (max-width: 768px)": {
+    fontSize: "0.8rem"
+  }
 });
 
 const cardValueStyle = {
   fontSize: "1.5rem",
   fontWeight: "700",
-  color: "#1f2937"
+  color: "#1f2937",
+  "@media (max-width: 768px)": {
+    fontSize: "1.2rem"
+  }
 };
 
 const tableWrapperStyle = {
   border: "1px solid #e5e7eb",
   borderRadius: "10px",
   overflow: "hidden",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+  boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+  overflowX: "auto",
+  "@media (max-width: 768px)": {
+    borderRadius: "8px"
+  }
 };
 
 const headerRowStyle = {
@@ -494,20 +581,31 @@ const thStyle = {
   color: "#374151",
   fontSize: "0.9rem",
   borderBottom: "1px solid #e5e7eb",
-  backgroundColor: "#f3f4f6"
+  backgroundColor: "#f3f4f6",
+  "@media (max-width: 768px)": {
+    padding: "0.7rem 0.8rem",
+    fontSize: "0.8rem"
+  }
 };
 
 const tdStyle = {
   padding: "0.9rem 1rem",
   borderBottom: "1px solid #e5e7eb",
-  fontSize: "0.95rem"
+  fontSize: "0.95rem",
+  "@media (max-width: 768px)": {
+    padding: "0.7rem 0.8rem",
+    fontSize: "0.85rem"
+  }
 };
 
 const emptyCellStyle = {
   padding: "2rem",
   textAlign: "center",
   color: "#6b7280",
-  fontStyle: "italic"
+  fontStyle: "italic",
+  "@media (max-width: 768px)": {
+    padding: "1.5rem"
+  }
 };
 
 const overlayStyle = {
@@ -520,7 +618,11 @@ const overlayStyle = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  zIndex: 1000
+  zIndex: 1000,
+  padding: "1rem",
+  "@media (max-width: 768px)": {
+    padding: "0.5rem"
+  }
 };
 
 const modalStyle = {
@@ -530,7 +632,11 @@ const modalStyle = {
   maxWidth: "600px",
   maxHeight: "80vh",
   overflow: "hidden",
-  boxShadow: "0 10px 25px rgba(0,0,0,0.2)"
+  boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+  "@media (max-width: 768px)": {
+    width: "95%",
+    borderRadius: "8px"
+  }
 };
 
 const modalHeaderStyle = {
@@ -539,14 +645,20 @@ const modalHeaderStyle = {
   alignItems: "center",
   padding: "1.2rem 1.5rem",
   borderBottom: "1px solid #e5e7eb",
-  backgroundColor: "#f9fafb"
+  backgroundColor: "#f9fafb",
+  "@media (max-width: 768px)": {
+    padding: "1rem"
+  }
 };
 
 const modalTitleStyle = {
   fontSize: "1.2rem",
   fontWeight: "600",
   color: "#1f2937",
-  margin: 0
+  margin: 0,
+  "@media (max-width: 768px)": {
+    fontSize: "1rem"
+  }
 };
 
 const closeBtnStyle = {
@@ -561,7 +673,12 @@ const closeBtnStyle = {
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  borderRadius: "50%"
+  borderRadius: "50%",
+  "@media (max-width: 768px)": {
+    fontSize: "1.3rem",
+    width: "25px",
+    height: "25px"
+  }
 };
 
 const modalContentWrapperStyle = {
@@ -571,13 +688,20 @@ const modalContentWrapperStyle = {
 };
 
 const modalContentStyle = {
-  padding: "1.5rem"
+  padding: "1.5rem",
+  "@media (max-width: 768px)": {
+    padding: "1rem"
+  }
 };
 
 const metricRowStyle = {
   display: "flex",
   gap: "1.5rem",
-  marginBottom: "1.5rem"
+  marginBottom: "1.5rem",
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    gap: "1rem"
+  }
 };
 
 const metricItemStyle = {
@@ -585,7 +709,10 @@ const metricItemStyle = {
   padding: "1.2rem",
   borderRadius: "8px",
   backgroundColor: "#f9fafb",
-  border: "1px solid #e5e7eb"
+  border: "1px solid #e5e7eb",
+  "@media (max-width: 768px)": {
+    padding: "1rem"
+  }
 };
 
 const metricLabelStyle = {
@@ -601,7 +728,10 @@ const metricValueStyle = {
   display: "block",
   fontSize: "1.5rem",
   fontWeight: "700",
-  color: "#1f2937"
+  color: "#1f2937",
+  "@media (max-width: 768px)": {
+    fontSize: "1.3rem"
+  }
 };
 
 const metricSubValueStyle = {
@@ -617,7 +747,10 @@ const largeMetricStyle = {
   borderRadius: "8px",
   backgroundColor: "#f9fafb",
   border: "1px solid #e5e7eb",
-  marginBottom: "1.5rem"
+  marginBottom: "1.5rem",
+  "@media (max-width: 768px)": {
+    padding: "1rem"
+  }
 };
 
 const dividerStyle = {
@@ -637,7 +770,10 @@ const infoTextStyle = {
 const actionButtonsContainer = {
   display: "flex",
   gap: "1rem",
-  justifyContent: "center"
+  justifyContent: "center",
+  "@media (max-width: 768px)": {
+    flexDirection: "column"
+  }
 };
 
 const actionButtonStyle = (color) => ({
@@ -651,6 +787,9 @@ const actionButtonStyle = (color) => ({
   transition: "all 0.2s ease",
   ":hover": {
     opacity: 0.9
+  },
+  "@media (max-width: 768px)": {
+    padding: "0.6rem 1rem"
   }
 });
 
@@ -662,13 +801,21 @@ const positionHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "1.5rem"
+  marginBottom: "1.5rem",
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "0.5rem"
+  }
 };
 
 const symbolStyle = {
   fontSize: "1.4rem",
   fontWeight: "700",
-  color: "#1f2937"
+  color: "#1f2937",
+  "@media (max-width: 768px)": {
+    fontSize: "1.2rem"
+  }
 };
 
 const qtyStyle = {
@@ -680,7 +827,10 @@ const qtyStyle = {
 const positionMetricsStyle = {
   display: "flex",
   gap: "1rem",
-  marginBottom: "1.5rem"
+  marginBottom: "1.5rem",
+  "@media (max-width: 768px)": {
+    flexDirection: "column"
+  }
 };
 
 const metricCardStyle = (bgColor) => ({
@@ -688,7 +838,10 @@ const metricCardStyle = (bgColor) => ({
   padding: "1rem",
   borderRadius: "8px",
   backgroundColor: bgColor,
-  textAlign: "center"
+  textAlign: "center",
+  "@media (max-width: 768px)": {
+    padding: "0.8rem"
+  }
 });
 
 const metricCardLabel = {
@@ -702,7 +855,10 @@ const metricCardValue = {
   display: "block",
   fontSize: "1.2rem",
   fontWeight: "700",
-  color: "#1f2937"
+  color: "#1f2937",
+  "@media (max-width: 768px)": {
+    fontSize: "1.1rem"
+  }
 };
 
 const additionalInfoStyle = {
@@ -711,7 +867,11 @@ const additionalInfoStyle = {
   borderRadius: "8px",
   border: "1px solid #e5e7eb",
   maxHeight: "200px",
-  overflowY: "auto"
+  overflowY: "auto",
+  "@media (max-width: 768px)": {
+    padding: "0.8rem",
+    maxHeight: "150px"
+  }
 };
 
 const tradeDetailStyle = {
@@ -722,13 +882,21 @@ const tradeHeaderStyle = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "1.5rem"
+  marginBottom: "1.5rem",
+  "@media (max-width: 768px)": {
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: "0.5rem"
+  }
 };
 
 const tradeSymbolStyle = {
   fontSize: "1.4rem",
   fontWeight: "700",
-  color: "#1f2937"
+  color: "#1f2937",
+  "@media (max-width: 768px)": {
+    fontSize: "1.2rem"
+  }
 };
 
 const tradeTypeTagStyle = (type) => ({
@@ -770,7 +938,11 @@ const tradeAdditionalInfo = {
   borderRadius: "8px",
   border: "1px solid #e5e7eb",
   maxHeight: "200px",
-  overflowY: "auto"
+  overflowY: "auto",
+  "@media (max-width: 768px)": {
+    padding: "0.8rem",
+    maxHeight: "150px"
+  }
 };
 
 const tradeTypeStyle = (type) => ({
@@ -790,3 +962,6 @@ const statusStyle = (status) => ({
   fontSize: "0.8rem",
   fontWeight: "600"
 });
+
+
+

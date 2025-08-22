@@ -400,3 +400,349 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🌐 Backend running on http://localhost:${PORT}`);
 });
+
+
+
+// // backend/index.js
+// const express = require("express");
+// const admin = require("firebase-admin");
+// require("dotenv").config({ path: "../.env" }); // load env from root
+// const { KiteConnect } = require("kiteconnect");
+// const cors = require("cors");
+
+// const app = express();
+// app.use(express.json());
+// app.use(cors()); // allow React frontend requests
+
+// // ----------------------
+// // Firebase Admin
+// // ----------------------
+// const serviceAccount = require("./serviceAccountKey.json"); // ✅ direct path
+
+// admin.initializeApp({
+//   credential: admin.credential.cert(serviceAccount),
+//   databaseURL: "https://traderapp-7e61b-default-rtdb.firebaseio.com/", // ✅ your DB URL
+// });
+
+// const db = admin.database();
+
+// // ----------------------
+// // Zerodha Kite
+// // ----------------------
+// const kc = new KiteConnect({ api_key: process.env.API_KEY });
+// let fetchersStarted = false;
+// let timers = [];
+
+// function startFetchers() {
+//   if (fetchersStarted) return;
+//   fetchersStarted = true;
+
+//   console.log("🚀 Starting Zerodha Trade Tracker...");
+
+//   Promise.all([
+//     fetchFunds(),
+//     fetchHoldings(),
+//     fetchPositions(),
+//     fetchTrades(),
+//     fetchOpenOrders(),
+//   ]).catch(() => {});
+
+//   timers.push(setInterval(fetchFunds, 30000));
+//   timers.push(setInterval(fetchHoldings, 60000));
+//   timers.push(setInterval(fetchPositions, 20000));
+//   timers.push(setInterval(fetchTrades, 10000));
+//   timers.push(setInterval(fetchOpenOrders, 15000));
+// }
+
+// function stopFetchers() {
+//   timers.forEach(clearInterval);
+//   timers = [];
+//   fetchersStarted = false;
+// }
+
+// async function initKite() {
+//   const snap = await db.ref("kite/access_token").once("value");
+//   const token = snap.val();
+//   if (token) {
+//     kc.setAccessToken(token);
+//     console.log("🔐 Loaded access_token from Firebase");
+//     startFetchers();
+//   } else {
+//     console.log("⚠️ No access_token in Firebase yet. Open /kite/login to authenticate.");
+//   }
+
+//   db.ref("kite/access_token").on("value", (s) => {
+//     const t = s.val();
+//     if (!t) {
+//       console.log("⚠️ access_token removed. Stopping fetchers.");
+//       stopFetchers();
+//       return;
+//     }
+//     kc.setAccessToken(t);
+//     console.log("✅ access_token updated in memory");
+//     if (!fetchersStarted) startFetchers();
+//   });
+// }
+
+// // ----------------------
+// // Fetchers
+// // ----------------------
+// const fetchFunds = async () => {
+//   try {
+//     const margins = await kc.getMargins();
+//     const equity = margins?.equity || {};
+//     const commodity = margins?.commodity || {};
+
+//     const walletData = {
+//       net: equity.net ?? 0,
+//       available: {
+//         cash: equity.available?.cash ?? 0,
+//         live_balance: equity.available?.live_balance ?? 0,
+//       },
+//       used: {
+//         m2m_unrealised: equity.used?.m2m_unrealised ?? 0,
+//       },
+//       commodity_net: commodity.net ?? 0,
+//       timestamp: Date.now(),
+//     };
+
+//     await db.ref("wallet").set(walletData);
+//     console.log("💰 Wallet updated successfully");
+//   } catch (error) {
+//     console.error("❌ Error fetching wallet:", error.message);
+//   }
+// };
+
+// const fetchHoldings = async () => {
+//   try {
+//     const holdings = await kc.getHoldings();
+
+//     const portfolioData = holdings.map((holding) => ({
+//       tradingsymbol: holding.tradingsymbol || "",
+//       quantity: holding.quantity || 0,
+//       average_price: holding.average_price || 0,
+//       last_price: holding.last_price || 0,
+//       pnl: holding.pnl || 0,
+//       day_change: holding.day_change || 0,
+//       day_change_percentage: holding.day_change_percentage || 0,
+//     }));
+
+//     await db.ref("portfolio").set(portfolioData);
+//     console.log(`📦 Portfolio updated: ${portfolioData.length} items`);
+//   } catch (error) {
+//     console.error("❌ Error fetching portfolio:", error.message);
+//   }
+// };
+
+// const fetchPositions = async () => {
+//   try {
+//     const positions = await kc.getPositions();
+
+//     const openPositions = (positions.net || []).map((position) => ({
+//       tradingsymbol: position.tradingsymbol || "",
+//       quantity: position.quantity || 0,
+//       average_price: position.average_price || 0,
+//       last_price: position.last_price || 0,
+//       pnl: position.pnl || 0,
+//       m2m: position.m2m || 0,
+//       status: "active",
+//     }));
+
+//     const positionsSummary = {
+//       total_pnl: openPositions.reduce((sum, p) => sum + p.pnl, 0),
+//       total_m2m: openPositions.reduce((sum, p) => sum + p.m2m, 0),
+//       timestamp: Date.now(),
+//     };
+
+//     await db.ref("open_positions").set(openPositions);
+//     await db.ref("open_positions_summary").set(positionsSummary);
+//     console.log(`📊 Positions updated: ${openPositions.length} items`);
+//   } catch (error) {
+//     console.error("❌ Error fetching positions:", error.message);
+//   }
+// };
+
+// const fetchTrades = async () => {
+//   try {
+//     const trades = await kc.getTrades();
+
+//     const toEpochMs = (ts) => {
+//       if (!ts) return 0;
+//       if (typeof ts === "number") return ts;
+//       const s = String(ts).trim();
+//       const d1 = new Date(s);
+//       if (!isNaN(d1.getTime())) return d1.getTime();
+//       const d2 = new Date(s.replace(" ", "T"));
+//       return isNaN(d2.getTime()) ? 0 : d2.getTime();
+//     };
+
+//     const executedTrades = trades.map((trade) => {
+//       const price = Number(trade.average_price ?? trade.price ?? 0);
+//       const ts = toEpochMs(
+//         trade.exchange_timestamp ||
+//           trade.trade_timestamp ||
+//           trade.order_timestamp ||
+//           trade.timestamp
+//       );
+
+//       return {
+//         tradingsymbol: trade.tradingsymbol || "",
+//         type: trade.transaction_type || "",
+//         qty: Number(trade.quantity ?? 0),
+//         price,
+//         avg_price: price,
+//         exchange: trade.exchange || "",
+//         product: trade.product || "",
+//         order_id: trade.order_id || "",
+//         timestamp: ts,
+//         status: "complete",
+//       };
+//     });
+
+//     executedTrades.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+//     await db.ref("executed_trades").set(executedTrades);
+//     console.log(`💱 Executed trades updated: ${executedTrades.length} total`);
+//   } catch (error) {
+//     console.error("❌ Error fetching trades:", error.message);
+//   }
+// };
+
+// const fetchOpenOrders = async () => {
+//   try {
+//     const orders = await kc.getOrders();
+
+//     const openOrders = orders
+//       .filter((order) => ["OPEN", "TRIGGER PENDING"].includes(order.status))
+//       .map((order) => ({
+//         order_id: order.order_id,
+//         tradingsymbol: order.tradingsymbol || "",
+//         status: order.status || "",
+//         product: order.product || "",
+//         quantity: order.quantity || 0,
+//         price: order.price || 0,
+//         order_type: order.order_type || "",
+//         exchange: order.exchange || "",
+//         transaction_type: order.transaction_type || "",
+//         variety: order.variety || "",
+//         validity: order.validity || "",
+//         timestamp: order.order_timestamp || "",
+//       }));
+
+//     openOrders.sort(
+//       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+//     );
+
+//     await db.ref("open_orders").set(openOrders);
+//     console.log(`📝 Open orders updated: ${openOrders.length} items`);
+//   } catch (error) {
+//     console.error("❌ Error fetching open orders:", error.message);
+//   }
+// };
+
+// // ----------------------
+// // Auth routes
+// // ----------------------
+// app.get("/kite/login", (req, res) => {
+//   const loginUrl = kc.getLoginURL();
+//   res.redirect(loginUrl);
+// });
+
+// app.get("/kite/callback", async (req, res) => {
+//   const requestToken = req.query.request_token;
+//   if (!requestToken) {
+//     return res.status(400).send("❌ Missing request_token");
+//   }
+
+//   try {
+//     const session = await kc.generateSession(requestToken, process.env.API_SECRET);
+//     const access_token = session.access_token;
+
+//     await db.ref("kite/access_token").set(access_token);
+
+//     res.send("✅ Access token saved successfully. You can close this window.");
+//   } catch (err) {
+//     console.error("❌ Error generating session:", err.message);
+//     res.status(500).send("Error generating session");
+//   }
+// });
+
+// // ----------------------
+// // API endpoints
+// // ----------------------
+// app.get("/", async (req, res) => {
+//   const tokenSnap = await db.ref("kite/access_token").once("value");
+//   res.json({
+//     status: "🚀 Zerodha Trade Tracker Running",
+//     token_present: !!tokenSnap.val(),
+//     endpoints: [
+//       "/kite/login",
+//       "/api/wallet",
+//       "/api/portfolio",
+//       "/api/positions",
+//       "/api/trades",
+//       "/api/open-orders",
+//     ],
+//     timestamp: new Date().toISOString(),
+//   });
+// });
+
+// app.get("/api/wallet", async (req, res) => {
+//   try {
+//     const snapshot = await db.ref("wallet").once("value");
+//     res.json(snapshot.val());
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// app.get("/api/portfolio", async (req, res) => {
+//   try {
+//     const snapshot = await db.ref("portfolio").once("value");
+//     res.json(snapshot.val());
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// app.get("/api/positions", async (req, res) => {
+//   try {
+//     const [positions, summary] = await Promise.all([
+//       db.ref("open_positions").once("value"),
+//       db.ref("open_positions_summary").once("value"),
+//     ]);
+//     res.json({
+//       positions: positions.val(),
+//       summary: summary.val(),
+//     });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// app.get("/api/trades", async (req, res) => {
+//   try {
+//     const snapshot = await db.ref("executed_trades").once("value");
+//     res.json(snapshot.val());
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// app.get("/api/open-orders", async (req, res) => {
+//   try {
+//     const snapshot = await db.ref("open_orders").once("value");
+//     res.json(snapshot.val());
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// // ----------------------
+// // Start server
+// // ----------------------
+// const PORT = process.env.PORT || 3000;
+// app.listen(PORT, () => {
+//   console.log(`🌐 Backend running on http://localhost:${PORT}`);
+//   initKite();
+// });

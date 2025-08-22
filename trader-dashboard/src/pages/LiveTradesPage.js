@@ -1,7 +1,5 @@
 
-
-
-
+                                       //mobile resposiveness
 
 // src/pages/LiveTradesPage.js
 import React, { useState, useEffect } from 'react';
@@ -12,6 +10,16 @@ import { format } from 'date-fns';
 const LiveTradesPage = () => {
   const [executedTrades, setExecutedTrades] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const dbRef = ref(db, "executed_trades");
@@ -94,7 +102,7 @@ const LiveTradesPage = () => {
     return isNaN(parsed) ? 0.0 : parsed;
   };
 
-  const TradeItem = ({ trade }) => {
+  const TradeItem = ({ trade, index }) => {
     const type = (trade.type || trade.transaction_type || "-").toString().toUpperCase();
     const qtyFilled = `${trade.filled_qty || trade.filled_quantity || trade.qty || 0}/${trade.qty || trade.quantity || 0}`;
     const symbol = getSymbolName(trade);
@@ -105,72 +113,162 @@ const LiveTradesPage = () => {
     const validity = trade.order_type || trade.validity || "";
 
     const isBuy = type === "BUY";
-    const typeColor = isBuy ? "#10B981" : "#EF4444";
 
     return (
       <div 
         onClick={() => showTradeDetails(trade)}
         style={{
-          padding: '14px 12px',
-          backgroundColor: '#0F1419',
-          borderBottom: '0.5px solid rgba(255, 255, 255, 0.12)',
-          cursor: 'pointer'
+          padding: isMobile ? '16px' : '24px',
+          background: 'rgba(255, 255, 255, 0.8)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '20px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.5)',
+          cursor: 'pointer',
+          transition: 'all 0.3s ease',
+          marginBottom: '16px',
+          opacity: 0,
+          animation: `slideInUp 0.6s ease-out ${index * 0.1}s forwards`
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-5px) scale(1.02)';
+          e.currentTarget.style.boxShadow = '0 15px 35px rgba(0,0,0,0.15)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          e.currentTarget.style.boxShadow = '0 10px 30px rgba(0,0,0,0.08)';
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          {/* BUY / SELL Badge */}
-          <div style={{
-            padding: '5px 10px',
-            backgroundColor: `${typeColor}26`,
-            borderRadius: 4
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: isMobile ? 'flex-start' : 'center', 
+          justifyContent: 'space-between',
+          gap: isMobile ? '12px' : '0'
+        }}>
+          {/* Left side - BUY/SELL badge and symbol info */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '16px', 
+            flex: 1,
+            width: isMobile ? '100%' : 'auto'
           }}>
-            <span style={{
-              color: typeColor,
-              fontWeight: 'bold',
-              fontSize: 12
-            }}>{type}</span>
-          </div>
-          
-          <div style={{ width: 10 }} />
-
-          {/* Qty + Symbol */}
-          <div style={{ flex: 1 }}>
-            <div style={{ color: 'white', fontSize: 13 }}>{qtyFilled}</div>
+            {/* BUY / SELL Badge */}
             <div style={{
-              color: 'white',
-              fontSize: 15,
-              fontWeight: 500
-            }}>{symbol}</div>
-            <div style={{ color: '#9ca3af', fontSize: 12 }}>{exchange}</div>
+              padding: isMobile ? '6px 12px' : '8px 16px',
+              background: isBuy ? 
+                'linear-gradient(135deg, rgba(0, 122, 255, 0.15) 0%, rgba(0, 122, 255, 0.05) 100%)' : 
+                'linear-gradient(135deg, rgba(255, 59, 48, 0.15) 0%, rgba(255, 59, 48, 0.05) 100%)',
+              border: isBuy ? 
+                '1px solid rgba(0, 122, 255, 0.2)' : 
+                '1px solid rgba(255, 59, 48, 0.2)',
+              borderRadius: '12px',
+              minWidth: isMobile ? '60px' : '70px',
+              textAlign: 'center'
+            }}>
+              <span style={{
+                color: isBuy ? '#007AFF' : '#FF3B30',
+                fontWeight: '700',
+                fontSize: isMobile ? '11px' : '12px'
+              }}>{type}</span>
+            </div>
+
+            {/* Symbol and quantity info */}
+            <div style={{ flex: 1 }}>
+              <div style={{
+                color: '#2c3e50',
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '700',
+                marginBottom: '4px'
+              }}>{symbol}</div>
+              <div style={{ 
+                color: '#6c757d', 
+                fontSize: isMobile ? '12px' : '13px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <span>Qty: {qtyFilled}</span>
+                <span style={{
+                  padding: '2px 8px',
+                  background: 'rgba(108, 117, 125, 0.1)',
+                  borderRadius: '8px',
+                  fontSize: isMobile ? '10px' : '11px'
+                }}>{exchange}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Time + Status + Avg Price + Order type */}
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-              <span style={{ color: '#9ca3af', fontSize: 12 }}>
+          {/* Right side - Price and status info */}
+          <div style={{ 
+            textAlign: isMobile ? 'left' : 'right', 
+            minWidth: isMobile ? '100%' : '140px',
+            display: isMobile ? 'flex' : 'block',
+            justifyContent: isMobile ? 'space-between' : 'flex-start',
+            alignItems: isMobile ? 'center' : 'flex-start'
+          }}>
+            <div style={{ 
+              color: '#2c3e50', 
+              fontSize: isMobile ? '16px' : '18px',
+              fontWeight: '800',
+              marginBottom: isMobile ? '0' : '4px'
+            }}>
+              ₹{formatPrice(avgPrice)}
+            </div>
+            <div style={{ 
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isMobile ? 'flex-end' : 'flex-end',
+              gap: '8px',
+              marginBottom: isMobile ? '0' : '4px'
+            }}>
+              <span style={{ 
+                color: '#6c757d', 
+                fontSize: isMobile ? '11px' : '12px',
+                fontWeight: '600'
+              }}>
                 {formatTime(trade.timestamp)}
               </span>
-              <div style={{ width: 6 }} />
               <div style={{
-                padding: '2px 6px',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                borderRadius: 4
+                padding: '3px 8px',
+                background: 'linear-gradient(135deg, rgba(52, 199, 89, 0.15) 0%, rgba(52, 199, 89, 0.05) 100%)',
+                border: '1px solid rgba(52, 199, 89, 0.2)',
+                borderRadius: '8px'
               }}>
                 <span style={{
-                  color: '#10B981',
-                  fontSize: 10,
-                  fontWeight: 'bold'
+                  color: '#34C759',
+                  fontSize: isMobile ? '8px' : '9px',
+                  fontWeight: '700',
+                  textTransform: 'uppercase'
                 }}>{status}</span>
               </div>
             </div>
-            <div style={{ color: 'white', fontSize: 13 }}>
-              Avg. {formatPrice(avgPrice)}
-            </div>
-            <div style={{ color: '#9ca3af', fontSize: 11 }}>
-              {orderType} {validity}
-            </div>
+            {!isMobile && (
+              <div style={{ 
+                color: '#6c757d', 
+                fontSize: '11px',
+                fontWeight: '600'
+              }}>
+                {orderType} {validity}
+              </div>
+            )}
           </div>
         </div>
+        
+        {/* Additional info for mobile view */}
+        {isMobile && (
+          <div style={{ 
+            color: '#6c757d', 
+            fontSize: '11px',
+            fontWeight: '600',
+            marginTop: '8px'
+          }}>
+            {orderType} {validity}
+          </div>
+        )}
       </div>
     );
   };
@@ -209,7 +307,7 @@ const LiveTradesPage = () => {
     const avgSell = totalSellQty > 0 ? sellProceeds / totalSellQty : 0.0;
     const realizedPnL = matchedQty * (avgSell - avgBuy);
 
-    alert(`Trade details for ${symbol}\nRealized P&L: ${realizedPnL.toFixed(2)}`);
+    alert(`Trade details for ${symbol}\nRealized P&L: ₹${realizedPnL.toFixed(2)}`);
   };
 
   const TradesList = () => {
@@ -217,14 +315,45 @@ const LiveTradesPage = () => {
       return (
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          height: '100%',
-          padding: 20
+          padding: isMobile ? '40px 20px' : '60px 20px',
+          textAlign: 'center'
         }}>
-          <span style={{ color: 'rgba(255, 255, 255, 0.54)', fontSize: 16 }}>
+          <div style={{
+            width: isMobile ? '60px' : '80px',
+            height: isMobile ? '60px' : '80px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(88, 86, 214, 0.1) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: isMobile ? '16px' : '24px',
+            fontSize: isMobile ? '24px' : '32px',
+            opacity: 0,
+            animation: 'fadeInScale 0.8s ease-out 0.3s forwards'
+          }}>
+            📊
+          </div>
+          <h3 style={{ 
+            color: '#2c3e50', 
+            fontSize: isMobile ? '20px' : '24px',
+            fontWeight: '700',
+            marginBottom: '8px',
+            opacity: 0,
+            animation: 'fadeIn 0.6s ease-out 0.5s forwards'
+          }}>
             No Executed Trades
-          </span>
+          </h3>
+          <p style={{ 
+            color: '#6c757d', 
+            fontSize: isMobile ? '14px' : '16px',
+            opacity: 0,
+            animation: 'fadeIn 0.6s ease-out 0.7s forwards'
+          }}>
+            Your executed trades will appear here
+          </p>
         </div>
       );
     }
@@ -232,7 +361,7 @@ const LiveTradesPage = () => {
     return (
       <div>
         {executedTrades.map((trade, index) => (
-          <TradeItem key={index} trade={trade} />
+          <TradeItem key={index} trade={trade} index={index} />
         ))}
       </div>
     );
@@ -240,34 +369,126 @@ const LiveTradesPage = () => {
 
   return (
     <div style={{ 
-      backgroundColor: '#0F1419',
-      minHeight: '100vh'
+      padding: isMobile ? "16px" : "20px", 
+      maxWidth: 1200, 
+      margin: "0 auto",
+      background: "linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)",
+      minHeight: "100vh"
     }}>
-      <div style={{
-        backgroundColor: '#1E3A8A',
-        color: 'white',
-        padding: '16px 0',
-        textAlign: 'center',
-        fontSize: 20,
-        fontWeight: 'bold'
-      }}>
-        Executed Trades
+      {/* Header */}
+      <div
+        style={{ 
+          textAlign: "center", 
+          marginBottom: isMobile ? "1.5rem" : "2rem",
+          opacity: 0,
+          animation: 'fadeInUp 0.6s ease-out 0.2s forwards'
+        }}
+      >
+        <h1 style={{ 
+          fontSize: isMobile ? "2rem" : "2.5rem", 
+          fontWeight: "800", 
+          background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          marginBottom: "0.5rem"
+        }}>
+          📈 Executed Trades
+        </h1>
+        <p style={{ 
+          color: "#6c757d", 
+          fontSize: isMobile ? "1rem" : "1.1rem" 
+        }}>
+          Track your executed trades in real-time
+        </p>
       </div>
       
       {isLoading ? (
         <div style={{
           display: 'flex',
+          flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
-          height: 'calc(100vh - 56px)'
+          height: '400px',
+          textAlign: 'center'
         }}>
-          <div className="spinner-border text-primary" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
+          <div style={{
+            width: '50px',
+            height: '50px',
+            border: '4px solid rgba(102, 126, 234, 0.3)',
+            borderTop: '4px solid #667eea',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '20px'
+          }} />
+          <span style={{
+            color: '#6c757d',
+            fontSize: '16px',
+            fontWeight: '600'
+          }}>Loading trades...</span>
         </div>
       ) : (
-        <TradesList />
+        <div style={{
+          background: 'rgba(255, 255, 255, 0.6)',
+          backdropFilter: 'blur(10px)',
+          borderRadius: '24px',
+          padding: isMobile ? '16px' : '24px',
+          boxShadow: '0 15px 35px rgba(0,0,0,0.1)',
+          border: '1px solid rgba(255, 255, 255, 0.5)',
+          opacity: 0,
+          animation: 'fadeInUp 0.8s ease-out 0.4s forwards'
+        }}>
+          <TradesList />
+        </div>
       )}
+
+      <style>{`
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

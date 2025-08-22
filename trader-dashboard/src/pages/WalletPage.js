@@ -1,6 +1,6 @@
 
 
-
+  //resposivesness 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { db, auth } from "../firebase";
@@ -15,6 +15,16 @@ export default function WalletPage() {
   const [portfolio, setPortfolio] = useState([]);
   const [investmentAmount, setInvestmentAmount] = useState(0);
   const [user, setUser] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -86,7 +96,7 @@ export default function WalletPage() {
 
   return (
     <div style={{ 
-      padding: "20px", 
+      padding: isMobile ? "16px" : "20px", 
       maxWidth: 1200, 
       margin: "0 auto",
       background: "linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%)",
@@ -97,10 +107,10 @@ export default function WalletPage() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        style={{ textAlign: "center", marginBottom: "2rem" }}
+        style={{ textAlign: "center", marginBottom: isMobile ? "1.5rem" : "2rem" }}
       >
         <h1 style={{ 
-          fontSize: "2.5rem", 
+          fontSize: isMobile ? "2rem" : "2.5rem", 
           fontWeight: "800", 
           background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
           WebkitBackgroundClip: "text",
@@ -109,7 +119,7 @@ export default function WalletPage() {
         }}>
           Portfolio Dashboard
         </h1>
-        <p style={{ color: "#6c757d", fontSize: "1.1rem" }}>
+        <p style={{ color: "#6c757d", fontSize: isMobile ? "1rem" : "1.1rem" }}>
           Track your investments in real-time
         </p>
       </motion.div>
@@ -117,13 +127,13 @@ export default function WalletPage() {
       {/* Wallet Overview */}
       <motion.div
         style={{
-          padding: "28px",
+          padding: isMobile ? "20px" : "28px",
           background: "rgba(255, 255, 255, 0.8)",
           backdropFilter: "blur(10px)",
           borderRadius: "24px",
           boxShadow: "0 15px 35px rgba(0,0,0,0.1)",
           border: "1px solid rgba(255, 255, 255, 0.5)",
-          marginBottom: "2.5rem",
+          marginBottom: isMobile ? "2rem" : "2.5rem",
         }}
         initial={{ opacity: 0, y: 30, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -132,16 +142,18 @@ export default function WalletPage() {
         <motion.div
           style={{
             display: "flex",
-            alignItems: "center",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "flex-start" : "center",
             justifyContent: "space-between",
-            marginBottom: "28px"
+            marginBottom: isMobile ? "20px" : "28px",
+            gap: isMobile ? "16px" : "0"
           }}
         >
           <motion.h2
             style={{
               margin: 0,
               color: "#2c3e50",
-              fontSize: "26px",
+              fontSize: isMobile ? "22px" : "26px",
               fontWeight: "700",
               display: "flex",
               alignItems: "center",
@@ -154,7 +166,7 @@ export default function WalletPage() {
             <motion.div
               animate={{ rotate: [0, 5, -5, 0], scale: [1, 1.1, 1] }}
               transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 5 }}
-              style={{ fontSize: "28px" }}
+              style={{ fontSize: isMobile ? "24px" : "28px" }}
             >
               💰
             </motion.div>
@@ -164,7 +176,7 @@ export default function WalletPage() {
           {/* Total P&L Indicator */}
           <motion.div
             style={{
-              padding: "10px 18px",
+              padding: isMobile ? "8px 14px" : "10px 18px",
               borderRadius: "20px",
               background: totalPnL >= 0 ? 
                 "linear-gradient(90deg, rgba(52, 199, 89, 0.15) 0%, rgba(52, 199, 89, 0.05) 100%)" : 
@@ -172,19 +184,20 @@ export default function WalletPage() {
               border: `1px solid ${totalPnL >= 0 ? "rgba(52, 199, 89, 0.2)" : "rgba(255, 59, 48, 0.2)"}`,
               display: "flex",
               alignItems: "center",
-              gap: "8px"
+              gap: "8px",
+              alignSelf: isMobile ? "flex-start" : "center"
             }}
             whileHover={{ scale: 1.05 }}
           >
             <span style={{ 
-              fontSize: "14px", 
+              fontSize: isMobile ? "13px" : "14px", 
               color: totalPnL >= 0 ? "#34c759" : "#ff3b30",
               fontWeight: "600"
             }}>
               Total P&L
             </span>
             <span style={{ 
-              fontSize: "18px", 
+              fontSize: isMobile ? "16px" : "18px", 
               fontWeight: "800", 
               color: totalPnL >= 0 ? "#34c759" : "#ff3b30" 
             }}>
@@ -195,8 +208,8 @@ export default function WalletPage() {
 
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", 
-          gap: "20px" 
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(280px, 1fr))", 
+          gap: isMobile ? "16px" : "20px" 
         }}>
           {[
             { 
@@ -228,7 +241,7 @@ export default function WalletPage() {
               key={label}
               style={{ 
                 background: bg, 
-                padding: "22px", 
+                padding: isMobile ? "18px" : "22px", 
                 borderRadius: "20px", 
                 border: border,
                 boxShadow: "0 5px 15px rgba(0,0,0,0.05)",
@@ -247,33 +260,40 @@ export default function WalletPage() {
                 position: "absolute", 
                 top: "-10px", 
                 right: "-10px", 
-                fontSize: "42px", 
+                fontSize: isMobile ? "36px" : "42px", 
                 opacity: 0.1,
                 transform: "rotate(15deg)"
               }}>
                 {icon}
               </div>
               
-              <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+              <div style={{ display: "flex", alignItems: "center", marginBottom: isMobile ? "10px" : "12px" }}>
                 <div style={{ 
-                  width: "40px", 
-                  height: "40px", 
+                  width: isMobile ? "36px" : "40px", 
+                  height: isMobile ? "36px" : "40px", 
                   borderRadius: "12px", 
                   background: "rgba(255, 255, 255, 0.7)", 
                   display: "flex", 
                   alignItems: "center", 
                   justifyContent: "center",
-                  marginRight: "12px",
-                  fontSize: "18px"
+                  marginRight: isMobile ? "10px" : "12px",
+                  fontSize: isMobile ? "16px" : "18px"
                 }}>
                   {icon}
                 </div>
-                <p style={{ margin: 0, color: "#6c757d", fontSize: "14px", fontWeight: "600" }}>{label}</p>
+                <p style={{ 
+                  margin: 0, 
+                  color: "#6c757d", 
+                  fontSize: isMobile ? "13px" : "14px", 
+                  fontWeight: "600" 
+                }}>
+                  {label}
+                </p>
               </div>
               
               <p style={{ 
                 margin: 0, 
-                fontSize: "26px", 
+                fontSize: isMobile ? "22px" : "26px", 
                 fontWeight: "800", 
                 color,
                 textShadow: "0 2px 4px rgba(0,0,0,0.05)"
@@ -289,9 +309,9 @@ export default function WalletPage() {
       <motion.div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-          gap: "20px",
-          marginBottom: "2.5rem"
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(250px, 1fr))",
+          gap: isMobile ? "16px" : "20px",
+          marginBottom: isMobile ? "2rem" : "2.5rem"
         }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -299,7 +319,7 @@ export default function WalletPage() {
       >
         <motion.div
           style={{
-            padding: "24px",
+            padding: isMobile ? "20px" : "24px",
             background: "rgba(255, 255, 255, 0.8)",
             backdropFilter: "blur(10px)",
             borderRadius: "20px",
@@ -311,27 +331,38 @@ export default function WalletPage() {
           transition={{ type: "spring", stiffness: 300 }}
         >
           <div style={{ 
-            width: "50px", 
-            height: "50px", 
+            width: isMobile ? "45px" : "50px", 
+            height: isMobile ? "45px" : "50px", 
             borderRadius: "50%", 
             background: "linear-gradient(135deg, #007AFF 0%, #5856D6 100%)", 
             display: "flex", 
             alignItems: "center", 
             justifyContent: "center",
             margin: "0 auto 15px",
-            fontSize: "20px"
+            fontSize: isMobile ? "18px" : "20px"
           }}>
             📊
           </div>
-          <h3 style={{ margin: "0 0 8px 0", color: "#2c3e50", fontSize: "18px" }}>Active Positions</h3>
-          <p style={{ margin: 0, fontSize: "32px", fontWeight: "800", color: "#007AFF" }}>
+          <h3 style={{ 
+            margin: "0 0 8px 0", 
+            color: "#2c3e50", 
+            fontSize: isMobile ? "16px" : "18px" 
+          }}>
+            Active Positions
+          </h3>
+          <p style={{ 
+            margin: 0, 
+            fontSize: isMobile ? "28px" : "32px", 
+            fontWeight: "800", 
+            color: "#007AFF" 
+          }}>
             {positions.length}
           </p>
         </motion.div>
 
         <motion.div
           style={{
-            padding: "24px",
+            padding: isMobile ? "20px" : "24px",
             background: "rgba(255, 255, 255, 0.8)",
             backdropFilter: "blur(10px)",
             borderRadius: "20px",
@@ -343,27 +374,38 @@ export default function WalletPage() {
           transition={{ type: "spring", stiffness: 300 }}
         >
           <div style={{ 
-            width: "50px", 
-            height: "50px", 
+            width: isMobile ? "45px" : "50px", 
+            height: isMobile ? "45px" : "50px", 
             borderRadius: "50%", 
             background: "linear-gradient(135deg, #FF9500 0%, #FF2D55 100%)", 
             display: "flex", 
             alignItems: "center", 
             justifyContent: "center",
             margin: "0 auto 15px",
-            fontSize: "20px"
+            fontSize: isMobile ? "18px" : "20px"
           }}>
             🔄
           </div>
-          <h3 style={{ margin: "0 0 8px 0", color: "#2c3e50", fontSize: "18px" }}>Total Trades</h3>
-          <p style={{ margin: 0, fontSize: "32px", fontWeight: "800", color: "#FF9500" }}>
+          <h3 style={{ 
+            margin: "0 0 8px 0", 
+            color: "#2c3e50", 
+            fontSize: isMobile ? "16px" : "18px" 
+          }}>
+            Total Trades
+          </h3>
+          <p style={{ 
+            margin: 0, 
+            fontSize: isMobile ? "28px" : "32px", 
+            fontWeight: "800", 
+            color: "#FF9500" 
+          }}>
             {trades.length}
           </p>
         </motion.div>
 
         <motion.div
           style={{
-            padding: "24px",
+            padding: isMobile ? "20px" : "24px",
             background: "rgba(255, 255, 255, 0.8)",
             backdropFilter: "blur(10px)",
             borderRadius: "20px",
@@ -375,20 +417,31 @@ export default function WalletPage() {
           transition={{ type: "spring", stiffness: 300 }}
         >
           <div style={{ 
-            width: "50px", 
-            height: "50px", 
+            width: isMobile ? "45px" : "50px", 
+            height: isMobile ? "45px" : "50px", 
             borderRadius: "50%", 
             background: "linear-gradient(135deg, #34C759 0%, #5AC8FA 100%)", 
             display: "flex", 
             alignItems: "center", 
             justifyContent: "center",
             margin: "0 auto 15px",
-            fontSize: "20px"
+            fontSize: isMobile ? "18px" : "20px"
           }}>
             📅
           </div>
-          <h3 style={{ margin: "0 0 8px 0", color: "#2c3e50", fontSize: "18px" }}>Today's Trades</h3>
-          <p style={{ margin: 0, fontSize: "32px", fontWeight: "800", color: "#34C759" }}>
+          <h3 style={{ 
+            margin: "0 0 8px 0", 
+            color: "#2c3e50", 
+            fontSize: isMobile ? "16px" : "18px" 
+          }}>
+            Today's Trades
+          </h3>
+          <p style={{ 
+            margin: 0, 
+            fontSize: isMobile ? "28px" : "32px", 
+            fontWeight: "800", 
+            color: "#34C759" 
+          }}>
             {trades.filter(trade => {
               const tradeDate = new Date(trade.timestamp || 0).toISOString().split('T')[0];
               const today = new Date().toISOString().split('T')[0];
@@ -401,13 +454,13 @@ export default function WalletPage() {
       {/* Performance Summary */}
       <motion.div
         style={{
-          padding: "28px",
+          padding: isMobile ? "20px" : "28px",
           background: "rgba(255, 255, 255, 0.8)",
           backdropFilter: "blur(10px)",
           borderRadius: "24px",
           boxShadow: "0 15px 35px rgba(0,0,0,0.1)",
           border: "1px solid rgba(255, 255, 255, 0.5)",
-          marginBottom: "2.5rem",
+          marginBottom: isMobile ? "2rem" : "2.5rem",
           textAlign: "center"
         }}
         initial={{ opacity: 0, y: 20 }}
@@ -417,7 +470,7 @@ export default function WalletPage() {
         <h3 style={{ 
           margin: "0 0 20px 0", 
           color: "#2c3e50", 
-          fontSize: "22px",
+          fontSize: isMobile ? "20px" : "22px",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -434,35 +487,57 @@ export default function WalletPage() {
         
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
-          gap: "20px" 
+          gridTemplateColumns: isMobile ? "1fr" : "repeat(auto-fit, minmax(200px, 1fr))", 
+          gap: isMobile ? "16px" : "20px" 
         }}>
           <motion.div
             style={{
-              padding: "20px",
+              padding: isMobile ? "16px" : "20px",
               background: "linear-gradient(135deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%)",
               borderRadius: "16px",
               border: "1px solid rgba(0, 122, 255, 0.2)"
             }}
             whileHover={{ scale: 1.05 }}
           >
-            <h4 style={{ margin: "0 0 10px 0", color: "#007AFF", fontSize: "16px" }}>Return on Investment</h4>
-            <p style={{ margin: 0, fontSize: "24px", fontWeight: "800", color: "#007AFF" }}>
+            <h4 style={{ 
+              margin: "0 0 10px 0", 
+              color: "#007AFF", 
+              fontSize: isMobile ? "14px" : "16px" 
+            }}>
+              Return on Investment
+            </h4>
+            <p style={{ 
+              margin: 0, 
+              fontSize: isMobile ? "20px" : "24px", 
+              fontWeight: "800", 
+              color: "#007AFF" 
+            }}>
               {roi.toFixed(2)}%
             </p>
           </motion.div>
           
           <motion.div
             style={{
-              padding: "20px",
+              padding: isMobile ? "16px" : "20px",
               background: "linear-gradient(135deg, rgba(52, 199, 89, 0.1) 0%, rgba(52, 199, 89, 0.05) 100%)",
               borderRadius: "16px",
               border: "1px solid rgba(52, 199, 89, 0.2)"
             }}
             whileHover={{ scale: 1.05 }}
           >
-            <h4 style={{ margin: "0 0 10px 0", color: "#34C759", fontSize: "16px" }}>Profit Ratio</h4>
-            <p style={{ margin: 0, fontSize: "24px", fontWeight: "800", color: "#34C759" }}>
+            <h4 style={{ 
+              margin: "0 0 10px 0", 
+              color: "#34C759", 
+              fontSize: isMobile ? "14px" : "16px" 
+            }}>
+              Profit Ratio
+            </h4>
+            <p style={{ 
+              margin: 0, 
+              fontSize: isMobile ? "20px" : "24px", 
+              fontWeight: "800", 
+              color: "#34C759" 
+            }}>
               {trades.length > 0 ? `${((trades.filter(t => t.pnl > 0).length / trades.length) * 100).toFixed(1)}%` : "0%"}
             </p>
           </motion.div>
@@ -471,8 +546,6 @@ export default function WalletPage() {
     </div>
   );
 }
-
-
 
 
 
