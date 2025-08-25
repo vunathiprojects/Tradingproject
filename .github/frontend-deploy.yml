@@ -1,34 +1,32 @@
-name: Deploy Frontend to Azure App Service
+name: Frontend Deploy
 
 on:
   push:
-    branches:
-      - master   # Change if your branch is different
+    branches: [ "master" ]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # Checkout code
+      - uses: actions/checkout@v3
 
-      # Set Node.js version
-      - name: Set up Node.js
+      # Setup Node.js
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22'
+          node-version: 22
 
       # Install dependencies
       - name: Install dependencies
         run: npm install
-        working-directory: ./Tradingproject
+        working-directory: ./trader-dashboard
 
       # Build React app
-      - name: Build React App
+      - name: Build
         run: npm run build
-        working-directory: ./Tradingproject
+        working-directory: ./trader-dashboard
 
       # Deploy to Azure App Service
       - name: Deploy to Azure WebApp
@@ -37,4 +35,4 @@ jobs:
           app-name: trader-dashboard-vunathicapital   # Your Azure App Service name
           slot-name: production
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
-          package: ./Tradingproject/build
+          package: ./trader-dashboard/build
