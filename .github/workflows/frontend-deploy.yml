@@ -8,21 +8,35 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
+      # Checkout code
       - uses: actions/checkout@v3
+
+      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 18   # LTS is safer with react-scripts 5
+          node-version: 18   # Use LTS
+
+      # Install dependencies
       - name: Install dependencies
         run: npm install
         working-directory: trader-dashboard
+
+      # Build React project
       - name: Build project
-        run: CI=false npm run build        # 👈 temporary bypass
+        run: CI=false npm run build
         working-directory: trader-dashboard
+
+      # 🔹 Login to Azure using Service Principal
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # 🔹 Deploy to Azure WebApp
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
         with:
           app-name: trader-dashboard-vunathicapital
           slot-name: production
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
           package: trader-dashboard/build
