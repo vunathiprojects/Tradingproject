@@ -1,53 +1,38 @@
-name: Build and deploy React app to Azure Web App - trader-dashboard-vunathicapital
+name: Deploy to Azure App Service
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
+    branches: [ "master" ]   # your repo default branch is master
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read # Required for actions/checkout
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      # Checkout code
+      - uses: actions/checkout@v3
 
-      - name: Set up Node.js version
+      # Setup Node.js
+      - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '22.x'
+          node-version: 22
 
+      # Install dependencies
       - name: Install dependencies
         run: npm install
+        working-directory: ./trader-dashboard
 
-      - name: Build React app
+      # Build React app
+      - name: Build
         run: npm run build
+        working-directory: ./trader-dashboard
 
-      - name: Upload build artifact for deployment
-        uses: actions/upload-artifact@v4
+      # Deploy to Azure Web App
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v3    # use latest v3
         with:
-          name: react-build
-          path: build
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: react-build
-
-      - name: Deploy to Azure Web App
-        id: deploy-to-webapp
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'trader-dashboard-vunathicapital'
-          slot-name: 'Production'
-          package: build
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_C11B55E2C639457A963D04B3BF3A5C2D }}
+          app-name: "trader-dashboard-vunathicapital"   # replace with your Azure App name
+          slot-name: "production"
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}  # make sure secret name matches repo
+          package: ./trader-dashboard/build
