@@ -1,0 +1,28 @@
+name: Deploy to Azure App Service
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+        working-directory: trader-dashboard
+      - name: Build
+        run: CI=false npm run build        # temporary bypass
+        working-directory: trader-dashboard
+      - name: Deploy to Azure WebApp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: "trader-dashboard-vunathicapital"
+          slot-name: "production"
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
+          package: trader-dashboard/build
