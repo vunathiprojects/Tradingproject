@@ -27,13 +27,13 @@ jobs:
         run: CI=false npm run build
         working-directory: trader-dashboard
 
-      # 🔹 Login to Azure using Service Principal
+      # Login to Azure using Service Principal
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # 🔹 Deploy to Azure WebApp
+      # Deploy to Azure WebApp
       - name: Deploy to Azure WebApp
         uses: azure/webapps-deploy@v3
         with:
